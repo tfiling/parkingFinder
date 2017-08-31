@@ -55,6 +55,8 @@ app.delete('/users/me/token', authenticate, (req, res) => {
 	});
 });
 
+require('./parkingSpaces').addParkingSpaceHandlers(app);
+
 /////////////////////
 //google authentication
 /*works - an access token is received from google after the user authenticates
