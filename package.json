@@ -14,10 +14,13 @@
     "bcryptjs": "^2.4.3",
     "body-parser": "^1.17.2",
     "express": "^4.15.4",
+    "google-auth-library": "^0.10.0",
+    "googleapis": "^21.3.0",
     "jsonwebtoken": "^7.4.3",
     "lodash": "^4.17.4",
     "mongodb": "^2.2.31",
     "mongoose": "^4.11.9",
+    "request": "^2.81.0",
     "validator": "^8.1.0"
   },
   "devDependencies": {

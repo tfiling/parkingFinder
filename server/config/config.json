@@ -2,11 +2,17 @@
   "test": {
     "PORT": 3000,
     "MONGODB_URI": "mongodb://localhost:27017/TodoAppTest",
-    "JWT_SECRET": "poijasdf98435jpgfdpoij3"
+    "JWT_SECRET": "poijasdf98435jpgfdpoij3",
+    "GOOGLE_OAUTH_CLIENT_ID": "554034996409-u50cs1j1s9brl53ipks9cemgdmugdaf8.apps.googleusercontent.com",
+    "GOOGLE_OAUTH_CLIENT_SECRET": "fG_Y0wRgF8opjE4YMFxcGuAM",
+    "GOOGLE_OAUTH_REDIRECT_URL": "http://localhost:3000/oauth2callback"
   },
   "development": {
     "PORT": 3000,
     "MONGODB_URI": "mongodb://localhost:27017/TodoApp",
-    "JWT_SECRET": "pojiaj234oi234oij234oij4"
+    "JWT_SECRET": "pojiaj234oi234oij234oij4",
+    "GOOGLE_OAUTH_CLIENT_ID": "554034996409-u50cs1j1s9brl53ipks9cemgdmugdaf8.apps.googleusercontent.com",
+    "GOOGLE_OAUTH_CLIENT_SECRET": "fG_Y0wRgF8opjE4YMFxcGuAM",
+    "GOOGLE_OAUTH_REDIRECT_URL": "http://localhost:3000/oauth2callback"
   }
 }
