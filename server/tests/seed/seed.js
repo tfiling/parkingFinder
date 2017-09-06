@@ -37,20 +37,58 @@ const populateUsers = (done) => {
 };
 
 //parking spaces test data
-const parkingSpaceOneID = new ObjectID();
-const parkingSpacesArray =	[{
-	_id: parkingSpaceOneID,
-	longitude: 34.768903,
-	latitude: 31.976557
-}];
+const parkingSpaceIDs = (() => {
+	let size = 10;
+	var IDArray = [];
+	for(i = 0; i < size; i++)
+	{
+		IDArray.push(new ObjectID());
+	}
+	return IDArray;
+})();
+//address property is not saved since it is not mentioned in the schema
+const parkingSpacesArray =	[
+	new ParkingSpace({
+		address: 'burla 31, rishon',
+		_id: parkingSpaceIDs[0],
+		latitude: 31.976625,
+		longitude: 34.768853
+	}),
+	new ParkingSpace({
+		address: 'burla 29, rishon',
+		_id: parkingSpaceIDs[1],
+		latitude: 31.976556,
+		longitude: 34.768803
+	}),
+	new ParkingSpace({
+		address: 'burla 15, rishon',
+		_id: parkingSpaceIDs[2],
+		latitude: 31.976338,
+		longitude: 34.767896
+	}),
+	new ParkingSpace({
+		address: 'ben saruk 14, rishon',
+		_id: parkingSpaceIDs[3],
+		latitude: 31.975423,
+		longitude: 34.773663
+	}),
+	new ParkingSpace({
+		address: 'hagefen 3, rishon',
+		_id: parkingSpaceIDs[4],
+		latitude: 31.96353,
+		longitude: 34.795918
+	})
+];
 
 const populateParkingSpaces = (done) =>
 {
 	ParkingSpace.remove({})
 		.then(() =>
 		{
-			parkingSpaceOne = new ParkingSpace(parkingSpacesArray[0]).save();
-			return parkingSpaceOne;
+			parkingSpacesArray.forEach((element) =>
+			{
+				new ParkingSpace(element).save();
+			});
 		})
 		.then(() =>
 		{

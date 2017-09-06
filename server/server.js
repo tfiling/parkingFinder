@@ -12,7 +12,7 @@ var {authenticate} = require('./middleware/authenticate');//authentication middl
 var app = express();
 const port = process.env.PORT;
 
-app.use(bodyParser.json());
+app.use(bodyParser.json());//add middleware for parsing json body
 
 // signup
 app.post('/users', (req, res) => {

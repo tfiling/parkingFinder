@@ -7,6 +7,7 @@ const bodyParser = require('body-parser');//parsing jsons in http request body
 const {ObjectID} = require('mongodb');//data base
 const {mongoose} = require('./db/mongoose');//ORM for mongodb
 const {ParkingSpace} = require('./models/parkingSpace');
+const {SearchResult} = require('./models/searchResult');
 const isValidateCoordinates = require('is-valid-coordinates');
 
 
@@ -30,7 +31,6 @@ function addParkingSpaceHandlers(app)
 		var latitude = req.body.latitude;
 		var longitude = req.body.longitude;
 		var _id = req.body._id;
-		console.log(req.body);
 
 		if (!(longitude && latitude) &&
 			!_id) {//should get either coordinates or instance id
@@ -75,20 +75,20 @@ function addParkingSpaceHandlers(app)
 		res.status(500).send({"error": "reached end of scope without returning"});//todo
 	});
 
-	app.get('/parkingSpaces', (req, res) =>
+	app.post('/parkingSpaces/searches', (req, res) =>
 	{
 		let latitude = req.body.latitude;
 		let longitude = req.body.longitude;
 		let distance = req.body.distance;
 		let addresString = req.body.address;
 		let requestCoordinates = {longitude, latitude};
-		console.log(requestCoordinates);
+		let searchTimeStamp = Date.now();
 
 		if (!distance || !(typeof distance === 'number') || distance <= 0)
 		{//required
 			return res.status(400).send({error: 'distance is required'});
 		}
-		if (((!latitude && !longitude) || isValidateCoordinates(longitude, latitude)) &&
+		if ((!latitude || !longitude || !isValidateCoordinates(longitude, latitude)) &&
 			(!addresString))
 		{
 			return res.status(400).send({error: 'address or coordinates are required'});
@@ -98,7 +98,6 @@ function addParkingSpaceHandlers(app)
 		{
 			ParkingSpace.find({}, function(err, parkingSpaces)
 			{
-				console.log(distance);
 				if (err)
 				{
 					console.log(`GET /parkingSpaces database query error: ${err}`);
@@ -106,12 +105,25 @@ function addParkingSpaceHandlers(app)
 				}
 				var filteredParkingSpaces = parkingSpaces.filter((parkingSpace) =>
 				{
-					console.log(parkingSpace.getDistance(requestCoordinates));
-					console.log(parkingSpace.getDistance(requestCoordinates) <= distance);
 					return parkingSpace.getDistance(requestCoordinates) <= distance;
 				});
-				console.log(filteredParkingSpaces);
-				return res.status(200).send({data: filteredParkingSpaces});
+				let searchResult = new SearchResult(
+					{
+						longitude: longitude,
+						latitude: latitude,
+						distance: distance,
+						timestamp: searchTimeStamp,
+						results: filteredParkingSpaces});
+				searchResult.save()
+					.then(() =>
+					{
+						return res.status(200).send({searchID: searchResult._id});
+					})
+					.catch((e) =>
+					{
+						console.log(`GET /parkingSpaces database save error: ${err}`);
+						return res.status(500).send({error: `internal error: ${err}`});
+					});
 			});
 		}
 		else if (addresString)
@@ -119,8 +131,25 @@ function addParkingSpaceHandlers(app)
 			//todo implement
 			return res.status(404).send({error: 'not implemented yet'});
 		}
-
+		//todo consider refactoring so when hitting this end of scope will return 500 or similar
 		console.log('end of get!!')
+
+	});
+
+	app.get('/parkingSpaces/searches/:id', async function (req, res)
+	{
+		let _id = req.params.id;
+
+		let storedSearchResult = await SearchResult.findOne({_id});
+		if (storedSearchResult)
+		{
+			res.status(200).send(storedSearchResult);
+		}
+		else
+		{
+			console.log(`a non existing search result was requested. id = ${_id}`);
+			res.status(404).send();
+		}
 
 	});
 }

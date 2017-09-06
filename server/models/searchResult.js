@@ -5,10 +5,9 @@
 //todo - remove unnecessary require
 const mongoose = require('mongoose');
 const validator = require('validator');//todo can it verify the coordinates?
-const jwt = require('jsonwebtoken');
 const _ = require('lodash');
-const bcrypt = require('bcryptjs');
 const haversine = require('haversine-geolocation');//calculate the distance between two coordinates
+const {ParkingSpace, ParkingSpaceSchema} = require('./parkingSpace');
 
 var SearchResultsSchema = new mongoose.Schema({
 	//todo verify and complete
@@ -28,22 +27,14 @@ var SearchResultsSchema = new mongoose.Schema({
 		trim: true
 	},
 	timestamp:{
-		type: Date,
+		type: Number,
 		required: true,
 		trim: true
 	},
-	results: [{
-		latitude: {
-			type: Number,
-			required: true,
-			trim: true
-		},
-		distance: {
-			type: Number,
-			required: true,
-			trim: true
-		}
-	}]
+	results: {
+		type: [ParkingSpaceSchema],
+		default: []
+	}
 });
 
 
@@ -75,19 +66,12 @@ SearchResultsSchema.methods.compare = function (secondObj)
 	return true;
 };
 
+//the folowing is muted for now. currently not needed - will use mongodb's _id
 //the uri for a specific search result includes this ID
 //the ID must bu unique
-SearchResultsSchema.statics.createSearchID = function () {
-	return new ObjectID();
-};
-
-// SearchResultsSchema.pre(<creation event>, function(next)
-// {
-// 	//todo find the relevant event - before object creation will assign the _id propery
-// 	var searchResult = this;
-// 	searchResult._id = SearchResultsSchema.statics.createSearchID();
-// 	next();
-// })
+// SearchResultsSchema.statics.createSearchID = function () {
+// 	return new ObjectID();
+// };
 
 SearchResultsSchema.methods.sortResults = function ()
 {
