@@ -75,13 +75,12 @@ function addParkingSpaceHandlers(app)
 		res.status(500).send({"error": "reached end of scope without returning"});//todo
 	});
 
-	app.post('/parkingSpaces/searches', (req, res) =>
+	app.post('/parkingSpaces/searches', async (req, res) =>
 	{
 		let latitude = req.body.latitude;
 		let longitude = req.body.longitude;
 		let distance = req.body.distance;
 		let addresString = req.body.address;
-		let requestCoordinates = {longitude, latitude};
 		let searchTimeStamp = Date.now();
 
 		if (!distance || !(typeof distance === 'number') || distance <= 0)
@@ -94,46 +93,61 @@ function addParkingSpaceHandlers(app)
 			return res.status(400).send({error: 'address or coordinates are required'});
 		}
 
+		var requestCoordinates;
+
 		if (longitude && latitude && isValidateCoordinates(longitude, latitude))
 		{
-			ParkingSpace.find({}, function(err, parkingSpaces)
-			{
-				if (err)
-				{
-					console.log(`GET /parkingSpaces database query error: ${err}`);
-					return res.status(500).send({error: `internal error: ${err}`});
-				}
-				var filteredParkingSpaces = parkingSpaces.filter((parkingSpace) =>
-				{
-					return parkingSpace.getDistance(requestCoordinates) <= distance;
-				});
-				let searchResult = new SearchResult(
-					{
-						longitude: longitude,
-						latitude: latitude,
-						distance: distance,
-						timestamp: searchTimeStamp,
-						results: filteredParkingSpaces});
-				searchResult.save()
-					.then(() =>
-					{
-						return res.status(200).send({searchID: searchResult._id});
-					})
-					.catch((e) =>
-					{
-						console.log(`GET /parkingSpaces database save error: ${err}`);
-						return res.status(500).send({error: `internal error: ${err}`});
-					});
-			});
+			requestCoordinates = {longitude, latitude};
 		}
 		else if (addresString)
 		{
-			//todo implement
-			return res.status(404).send({error: 'not implemented yet'});
+			try
+			{
+				var addressesFound = await SearchResult.parseStringAddress(addresString);
+				requestCoordinates = addressesFound[0];
+			}
+			catch(e)
+			{
+				console.log(`failed parsing the address ${addresString} with the error ${e}`);
+				var code = e.code || 500;
+				return res.status(code).send(e.message);//todo reconsider sending the message to the clinet
+
+			}
+
 		}
+		var parkingSpaces = await ParkingSpace.find({}, function(err, parkingSpaces) {
+			if (err) {
+				console.log(`GET /parkingSpaces database query error: ${err}`);
+				return res.status(500).send({error: `internal error: ${err}`});
+			}
+			Promise.resolve(parkingSpaces);
+		});
+
+		var filteredParkingSpaces = parkingSpaces.filter((parkingSpace) =>
+		{
+			return parkingSpace.getDistance(requestCoordinates) <= distance;
+		});
+		console.log(requestCoordinates);
+		let searchResult = new SearchResult(
+			{
+				address: requestCoordinates.address,
+				longitude: requestCoordinates.longitude,
+				latitude: requestCoordinates.latitude,
+				distance: distance,
+				timestamp: searchTimeStamp,
+				results: filteredParkingSpaces});
+		searchResult.save()
+			.then(() =>
+			{
+				return res.status(200).send({searchID: searchResult._id});
+			})
+			.catch((e) =>
+			{
+				console.log(`GET /parkingSpaces database save error: ${e}`);
+				return res.status(500).send({error: `internal error: ${e}`});
+			});
 		//todo consider refactoring so when hitting this end of scope will return 500 or similar
 		console.log('end of get!!')
-
 	});
 
 	app.get('/parkingSpaces/searches/:id', async function (req, res)

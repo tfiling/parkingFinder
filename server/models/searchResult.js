@@ -8,9 +8,15 @@ const validator = require('validator');//todo can it verify the coordinates?
 const _ = require('lodash');
 const haversine = require('haversine-geolocation');//calculate the distance between two coordinates
 const {ParkingSpace, ParkingSpaceSchema} = require('./parkingSpace');
+const requestPN = require('request-promise-native');
 
 var SearchResultsSchema = new mongoose.Schema({
 	//todo verify and complete
+	address: {
+		type: String,
+		trim: true,
+		required: false
+	},
 	longitude: {
 		type: Number,
 		required: true,
@@ -92,6 +98,68 @@ SearchResultsSchema.methods.getClosestParkingSpace = function ()
 SearchResultsSchema.statics.findByID = function (id)
 {
 	return SearchResult.findOne({_id: id});
+};
+
+/**
+ * @throws error when request fails or
+ * @param stringAddress
+ * @return [{address, longitude, latitude}].length >= 1
+ */
+SearchResultsSchema.statics.parseStringAddress = async function(stringAddress)
+{
+	try
+	{
+		var encodedAddress = encodeURIComponent(stringAddress);
+
+		var response = await requestPN({
+			url: `https://maps.googleapis.com/maps/api/geocode/json?address=${encodedAddress}`,
+			json: true
+		});
+	}
+	catch (e)
+	{
+		let message = `SearchResult.parseStringAddress: google maps resulted the following error: ${e}`;
+		console.log(message);
+		var error = new Error(message);
+		error.code = 500;
+		throw error;
+	}
+
+	if (response.status === 'ZERO_RESULTS') {
+		let message = `SearchResult.parseStringAddress: Unable to find address ${stringAddress}.`;
+		console.log(message);
+		var error = new Error(message);
+		error.code = 400;
+		throw error;
+	} else if (response.status === 'OK') {
+		var parsedResults = response.results
+			.map((element) =>
+			{//extract the desired properties for each result
+				if (element.formatted_address &&
+					element.geometry.location.lat &&
+					element.geometry.location.lng)
+				{
+					return {
+						address: element.formatted_address,
+						latitude: element.geometry.location.lat,
+						longitude: element.geometry.location.lng
+					};
+				}
+				return undefined;
+			})
+			.filter((element) =>
+			{//filter the result object that did not contain the desired properties
+				return (element != undefined);
+			});
+		if (parsedResults.length == 0)
+		{
+			console.log(`SearchResult.parseStringAddress: failed extracting the coordinates from the ${response.results}`);
+			var error = new Error('could not find the location of the address');
+			error.code = 500;
+			throw error;
+		}
+		return parsedResults;
+	}
 };
 
 

@@ -366,21 +366,44 @@ describe('GET /parkingSpaces/searches/{id}', () =>
 	/**
 	 *
 	 * @param res - the HTTP response
+	 * @param locationObj - an object that is either {latitude, longitude} or {address}
+	 */
+	let verifyResultLocationIdenticalToOriginalSearch = function(res, locationObj)
+	{
+		if (locationObj.hasOwnProperty('latitude') && locationObj.hasOwnProperty('longitude'))
+		{
+			let latitudeReceived = res.body.latitude;
+			expect(latitudeReceived)
+				.toExist()
+				.toBe(locationObj.latitude);
+
+			let longitudeReceived = res.body.longitude;
+			expect(longitudeReceived)
+				.toExist()
+				.toBe(locationObj.longitude);
+		}
+		else if (locationObj.hasOwnProperty('address'))
+		{
+			let addressReceived = res.body.address;
+			expect(addressReceived)
+				.toExist()
+		}
+		else
+		{
+			expect(false).toBe(true, `verifyResultLocationIdenticalToOriginalSearch: received bad locationObj - ${locationObj}`);
+		}
+	};
+
+	/**
+	 *
+	 * @param res - the HTTP response
+	 * @param locationObj - an object that is either {latitude, longitude} or {address}
 	 * @param distance
 	 * @param querySendTimestamp
 	 */
-	let verifyResultIdenticalToOriginalSearch = function (res, longitude, latitude, distance, querySendTimestamp)
+	let verifyResultIdenticalToOriginalSearch = function (res, locationObj, distance, querySendTimestamp)
 	{
-		console.log(res.body);
-		let latitudeReceived = res.body.latitude;
-		expect(latitudeReceived)
-			.toExist()
-			.toBe(latitude);
-
-		let longitudeReceived = res.body.longitude;
-		expect(longitudeReceived)
-			.toExist()
-			.toBe(longitude);
+		verifyResultLocationIdenticalToOriginalSearch(res, locationObj);
 
 		let distanceRecived = res.body.distance;
 		expect(distance)
@@ -395,6 +418,7 @@ describe('GET /parkingSpaces/searches/{id}', () =>
 			.toBeLessThanOrEqualTo(Date.now());
 	};
 
+	//tests based on coordinates
 	it('it should return the first 3 burla parking spaces', (done) =>
 	{
 		let distance = 300;
@@ -419,8 +443,8 @@ describe('GET /parkingSpaces/searches/{id}', () =>
 					.expect((res) =>
 					{
 						verifyResultIdenticalToOriginalSearch(res,
-							requestBody.longitude,
-							requestBody.latitude,
+							{longitude: requestBody.longitude,
+							latitude: requestBody.latitude},
 							requestBody.distance, querySendTimestamp);
 
 						let results = res.body.results;
@@ -479,8 +503,8 @@ describe('GET /parkingSpaces/searches/{id}', () =>
 					.expect((res) =>
 					{
 						verifyResultIdenticalToOriginalSearch(res,
-							requestBody.longitude,
-							requestBody.latitude,
+							{longitude: requestBody.longitude,
+								latitude: requestBody.latitude},
 							requestBody.distance,
 							querySendTimestamp);
 
@@ -539,8 +563,8 @@ describe('GET /parkingSpaces/searches/{id}', () =>
 					.expect((res) =>
 					{
 						verifyResultIdenticalToOriginalSearch(res,
-							requestBody.longitude,
-							requestBody.latitude,
+							{longitude: requestBody.longitude,
+								latitude: requestBody.latitude},
 							requestBody.distance,
 							querySendTimestamp);
 
@@ -576,6 +600,195 @@ describe('GET /parkingSpaces/searches/{id}', () =>
 			});
 	});
 
+	//tests based on address string
+	it('it should return the first 3 burla parking spaces when searching with string address argument', (done) =>
+	{
+		let distance = 300;
+		let address = 'burla 31 rishon lezion';
+		let requestBody = {address, distance};
+		let querySendTimestamp = Date.now();
+		request(app)
+			.post('/parkingSpaces/searches')
+			.send(requestBody)
+			.expect(200)
+			.expect((res) =>
+			{
+				let searchID = res.body.searchID;
+				expect(searchID).toExist();
+				request(app)
+					.get(`/parkingSpaces/searches/${searchID}`)
+					.expect(200)
+					.expect((res) =>
+					{
+						verifyResultIdenticalToOriginalSearch(res,
+							{address},
+							requestBody.distance, querySendTimestamp);
+
+						let results = res.body.results;
+						expect(results).toExist();
+						expect(Array.isArray(results)).toBe(true);
+						expect(results.length).toBe(3);
+						expect(_.findIndex(results, (element) => parkingSpacesArray[0].compare(element))).toBeGreaterThanOrEqualTo(0);
+						expect(_.findIndex(results, (element) => parkingSpacesArray[1].compare(element))).toBeGreaterThanOrEqualTo(0);
+						expect(_.findIndex(results, (element) => parkingSpacesArray[2].compare(element))).toBeGreaterThanOrEqualTo(0);
+						expect(_.findIndex(results, (element) => parkingSpacesArray[3].compare(element))).toBeLessThanOrEqualTo(-1);
+						expect(_.findIndex(results, (element) => parkingSpacesArray[4].compare(element))).toBeLessThanOrEqualTo(-1);
+					})
+					.end((err) =>
+					{
+						if (err)
+						{
+							return done(err)
+						}
+						else
+						{
+							return done();
+						}
+
+					});
+			})
+			.end((err) =>
+			{
+				if (err)
+				{
+					return done(err)
+				}
+			});
+	});
+
+	it('should return the 3 Burla and ben saruk parking spaces when searching with string address argument', (done) =>
+	{
+		let distance = 1000;
+		let address = 'burla 31 rishon lezion';
+		let requestBody = {address, distance};
+		let querySendTimestamp = Date.now();
+		request(app)
+			.post('/parkingSpaces/searches')
+			.send(requestBody)
+			.expect(200)
+			.expect((res) =>
+			{
+				let searchID = res.body.searchID;
+				expect(searchID).toExist();
+				request(app)
+					.get(`/parkingSpaces/searches/${searchID}`)
+					.expect(200)
+					.expect((res) =>
+					{
+						verifyResultIdenticalToOriginalSearch(res,
+							{address},
+							requestBody.distance,
+							querySendTimestamp);
+
+
+						let results = res.body.results;
+						expect(results).toExist();
+						expect(Array.isArray(results)).toBe(true);
+						expect(results.length).toBe(4);
+						expect(_.findIndex(results, (element) => parkingSpacesArray[0].compare(element))).toBeGreaterThanOrEqualTo(0);
+						expect(_.findIndex(results, (element) => parkingSpacesArray[1].compare(element))).toBeGreaterThanOrEqualTo(0);
+						expect(_.findIndex(results, (element) => parkingSpacesArray[2].compare(element))).toBeGreaterThanOrEqualTo(0);
+						expect(_.findIndex(results, (element) => parkingSpacesArray[3].compare(element))).toBeGreaterThanOrEqualTo(0);
+						expect(_.findIndex(results, (element) => parkingSpacesArray[4].compare(element))).toBeLessThan(0);
+					})
+					.end((err) =>
+					{
+						if (err)
+						{
+							return done(err)
+						}
+						else
+						{
+							return done();
+						}
+
+					});
+			})
+			.end((err) =>
+			{
+				if (err)
+				{
+					return done(err)
+				}
+			});
+	});
+
+	it('should return 400 for non-existing address sent', (done) =>
+	{
+		let address = 'iefiuwehfuwehfuweiu';
+		let distance = 10;
+		let requestBody = {address, distance};
+		request(app)
+			.post('/parkingSpaces/searches')
+			.send(requestBody)
+			.expect(400)
+			.end((err) =>
+			{
+				if (err)
+				{
+					return done(err);
+				}
+				return done(err);
+			});
+	});
+
+	it('should return only the gefen parking when searching with string address argument', (done) =>
+	{
+		let address = 'hagefen 3 rishon lezion';
+		let distance = 10;
+		let requestBody = {address, distance};
+		let querySendTimestamp = Date.now();
+		request(app)
+			.post('/parkingSpaces/searches')
+			.send(requestBody)
+			.expect(200)
+			.expect((res) =>
+			{
+				let searchID = res.body.searchID;
+				expect(searchID).toExist();
+				request(app)
+					.get(`/parkingSpaces/searches/${searchID}`)
+					.expect(200)
+					.expect((res) =>
+					{
+						verifyResultIdenticalToOriginalSearch(res,
+							{address},
+							requestBody.distance,
+							querySendTimestamp);
+
+						let results = res.body.results;
+						expect(results).toExist();
+						expect(Array.isArray(results)).toBe(true);
+						expect(results.length).toBe(1);
+						expect(_.findIndex(results, (element) => parkingSpacesArray[0].compare(element))).toBeLessThan(0);
+						expect(_.findIndex(results, (element) => parkingSpacesArray[1].compare(element))).toBeLessThan(0);
+						expect(_.findIndex(results, (element) => parkingSpacesArray[2].compare(element))).toBeLessThan(0);
+						expect(_.findIndex(results, (element) => parkingSpacesArray[3].compare(element))).toBeLessThan(0);
+						expect(_.findIndex(results, (element) => parkingSpacesArray[4].compare(element))).toBeGreaterThanOrEqualTo(0);
+					})
+					.end((err) =>
+					{
+						if (err)
+						{
+							return done(err)
+						}
+						else
+						{
+							return done();
+						}
+
+					});
+			})
+			.end((err) =>
+			{
+				if (err)
+				{
+					return done(err)
+				}
+			});
+	});
+
+	//////////////////
 	it('return 404 for non-existing search result', (done) =>
 	{
 		//since every generated id is unique, this one should not be used in the system
