@@ -128,8 +128,8 @@ app.get('/signup', (req, res) =>
 
 
 
-app.listen(port, () => {
+const server = app.listen(port, () => {
 	console.log(`Started up at port ${port}`);
 });
 
-module.exports = {app};
+module.exports = {server, app};

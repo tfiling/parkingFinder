@@ -8,5 +8,11 @@ if (env === 'development' || env === 'test') {
 		process.env[key] = envConfig[key];
 	});
 
-	process.env.GOOGLE_APPLICATION_CREDENTIALS = process.cwd() + '\\google_api_client_secret.json';//todo add to heroku
+	process.env.GOOGLE_APPLICATION_CREDENTIALS = process.cwd() + '\\google_api_client_secret.json';
 }
+
+/**
+ *	todo add to heroku the following configurations
+ *	WEB_SOCKET_PORT
+ *
+ */
